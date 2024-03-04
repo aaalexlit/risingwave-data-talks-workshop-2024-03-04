@@ -60,6 +60,32 @@ You may need to use the [dynamic filter pattern](https://docs.risingwave.com/doc
 Bonus (no marks): Create an MV which can identify anomalies in the data. For example, if the average trip time between two zones is 1 minute,
 but the max trip time is 10 minutes and 20 minutes respectively.
 
+```sql
+-- Create a materialized view to compute the average, min and max trip time between each taxi zone.
+CREATE MATERIALIZED VIEW trip_time_between_zones_stats AS
+	with time_between_zones as (
+	select (tpep_dropoff_datetime - tpep_pickup_datetime) as trip_time, puz.zone pu_zone, doz.zone do_zone
+	from trip_data
+	JOIN taxi_zone as puz
+	    ON trip_data.pulocationid = puz.location_id
+	JOIN taxi_zone as doz
+	    ON trip_data.DOLocationID = doz.location_id)
+	select t.pu_zone, t.do_zone, avg(trip_time) as avg_trip_time, min(trip_time) as min_trip_time, max(trip_time) as max_trip_time
+	from time_between_zones t
+	group by pu_zone, do_zone;
+
+--find the pair of taxi zones with the highest average trip time
+select * from trip_time_between_zones_stats 
+order by avg_trip_time desc
+limit 1;
+```
+
+```
+pu_zone       |do_zone |avg_trip_time|min_trip_time|max_trip_time|
+--------------+--------+-------------+-------------+-------------+
+Yorkville East|Steinway|     23:59:33|     23:59:33|     23:59:33|
+```
+
 Options:
 1. Yorkville East, Steinway
 2. Murray Hill, Midwood
@@ -69,6 +95,39 @@ Options:
 ## Question 2
 
 Recreate the MV(s) in question 1, to also find the number of trips for the pair of taxi zones with the highest average trip time.
+
+```sql
+drop MATERIALIZED VIEW trip_time_between_zones_stats;
+
+-- Recreate the MV(s) in question 1, to also find the number of trips for the pair of taxi zones with the highest average trip time.
+CREATE MATERIALIZED VIEW trip_time_between_zones_stats as
+	with time_between_zones as (
+	select (tpep_dropoff_datetime - tpep_pickup_datetime) as trip_time, puz.zone pu_zone, doz.zone do_zone
+	from trip_data
+	JOIN taxi_zone as puz
+	    ON trip_data.pulocationid = puz.location_id
+	JOIN taxi_zone as doz
+	    ON trip_data.DOLocationID = doz.location_id)
+	select t.pu_zone, 
+	t.do_zone, 
+	avg(trip_time) as avg_trip_time, 
+	min(trip_time) as min_trip_time, 
+	max(trip_time) as max_trip_time,
+	count(trip_time) as trip_qnt
+	from time_between_zones t
+	group by pu_zone, do_zone;
+
+--find the pair of taxi zones with the highest average trip time
+select * from trip_time_between_zones_stats 
+order by avg_trip_time desc
+limit 1;
+```
+
+```
+pu_zone       |do_zone |avg_trip_time|min_trip_time|max_trip_time|trip_qnt|
+--------------+--------+-------------+-------------+-------------+--------+
+Yorkville East|Steinway|     23:59:33|     23:59:33|     23:59:33|       1|
+```
 
 Options:
 1. 5
@@ -86,6 +145,30 @@ HINT: You can use [dynamic filter pattern](https://docs.risingwave.com/docs/curr
 to create a filter condition based on the latest pickup time.
 
 NOTE: For this question `17 hours` was picked to ensure we have enough data to work with.
+
+```sql
+SELECT
+    taxi_zone.Zone AS pickup_zone,
+    count(*) AS pickup_cnt
+FROM
+    trip_data
+        JOIN taxi_zone
+            ON trip_data.pulocationid = taxi_zone.location_id
+WHERE
+    trip_data.tpep_pickup_datetime > ((SELECT MAX(tpep_pickup_datetime) FROM trip_data) - interval '17 hour')
+GROUP BY
+    taxi_zone.Zone
+ORDER BY pickup_cnt DESC
+    LIMIT 3;
+```
+
+```
+pickup_zone        |pickup_cnt|
+-------------------+----------+
+LaGuardia Airport  |        19|
+JFK Airport        |        17|
+Lincoln Square East|        17|
+```
 
 Options:
 1. Clinton East, Upper East Side North, Penn Station

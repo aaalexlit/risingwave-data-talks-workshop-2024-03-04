@@ -6,3 +6,5 @@ prometheus*
 risingwave.toml
 homework/
 .DS_Store
+
+.idea
