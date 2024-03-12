@@ -4,6 +4,11 @@
 
 Before beginning on this section, make sure you have setup your environment according to the [README](./README.md).
 
+Note that in every new terminal you should run the following command to load the environment variables and commands:
+```bash
+source commands.sh
+```
+
 ## Setting up RisingWave with Docker Compose
 
 Reference: https://docs.risingwave.com/docs/current/risingwave-docker-compose/
@@ -40,8 +45,11 @@ Let's start ingestion into RisingWave by running it:
 stream-kafka
 ```
 
-After that is complete, we have to also create the trip_data table:
+Now we can let that run in the background.
+
+Let's open another terminal to create the trip_data table:
 ```bash
+source commands.sh
 psql -f risingwave-sql/table/trip_data.sql
 ```
 
@@ -361,6 +369,25 @@ CREATE MATERIALIZED VIEW longest_trip_1_min AS SELECT
 ```
 
 Didn't include the query plan this time, you may look at the dashboard.
+
+After this, you may run the visualization dashboard to see the data in real-time.
+
+Start the backend which queries RisingWave:
+```bash
+./server.py
+```
+
+### Visualize Data from Materialized View 3 and 4
+
+Start the frontend, in a separate terminal, if you're on OSX:
+```bash
+open index.html
+```
+
+Start the frontend, in a separate terminal, if you're on linux:
+```bash
+xdg-open index.html
+```
 
 ### Materialized View 5: Average Fare Amount vs Number of rides
 
